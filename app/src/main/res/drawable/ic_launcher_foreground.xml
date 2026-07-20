@@ -1,0 +1,14 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- 打开的书本 -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M54,38 C48,32 38,30 28,32 L28,72 C38,70 48,72 54,78 C60,72 70,70 80,72 L80,32 C70,30 60,32 54,38 Z" />
+    <!-- 书脊折痕 -->
+    <path
+        android:fillColor="#0EA5E9"
+        android:pathData="M52.5,40 L55.5,40 L55.5,76 L52.5,76 Z" />
+</vector>
