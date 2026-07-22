@@ -133,12 +133,12 @@ fun HomeScreen(
                     )
                 }
             }
-            IconButton(onClick = {
-                haptic(HapticFeedbackType.TextHandleMove)
-                onOpenSettings()
-            }) {
-                Icon(Icons.Default.Settings, contentDescription = "设置")
-            }
+//            IconButton(onClick = {
+//                haptic(HapticFeedbackType.TextHandleMove)
+//                onOpenSettings()
+//            }) {
+//                Icon(Icons.Default.Settings, contentDescription = "设置")
+//            }
         }
 
         Spacer(Modifier.height(20.dp))
