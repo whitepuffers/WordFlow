@@ -107,7 +107,7 @@ fun QuizRoute() {
     }
     // 听力题：进入新题自动播放
     LaunchedEffect(state.index, state.phase) {
-        if (state.phase == QuizPhase.IN_PROGRESS && state.mode == QuizMode.LISTENING) {
+        if (state.phase == QuizPhase.IN_PROGRESS && state.mode == QuizMode.LISTENING && soundEnabled) {
             delay(300)
             state.current?.let { container.ttsManager.speak(it.word) }
         }
@@ -126,7 +126,7 @@ fun QuizRoute() {
                 onChoice = viewModel::answerChoice,
                 onFillChange = viewModel::updateFillInput,
                 onFillSubmit = { viewModel.answerFillBlank(state.fillInput) },
-                onSpeak = { container.ttsManager.speak(state.current?.word ?: "") }
+                onSpeak = { if (soundEnabled) container.ttsManager.speak(state.current?.word ?: "") }
             )
 
             QuizPhase.RESULT -> QuizResultScreen(

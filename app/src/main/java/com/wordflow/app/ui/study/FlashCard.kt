@@ -18,9 +18,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
-import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
@@ -30,6 +30,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -86,7 +87,7 @@ fun SwipeFlashCard(
 
     val thresholdX = with(density) { 110.dp.toPx() }
     val thresholdY = with(density) { 110.dp.toPx() }
-    var crossedX by remember { mutableStateOf(0) }   // -1/0/1，用于越界震动
+    var crossedX by remember { mutableIntStateOf(0) }   // -1/0/1，用于越界震动
     var crossedUp by remember { mutableStateOf(false) }
 
     val cardShape = RoundedCornerShape(24.dp)
@@ -120,11 +121,11 @@ fun SwipeFlashCard(
                             else -> 0
                         }
                         if (newCross != 0 && newCross != crossedX) {
-                            haptic(HapticFeedbackType.GestureThresholdActivate)
+                            haptic(HapticFeedbackType.LongPress)
                         }
                         crossedX = newCross
                         val up = offsetY.value < -thresholdY
-                        if (up && !crossedUp) haptic(HapticFeedbackType.GestureThresholdActivate)
+                        if (up && !crossedUp) haptic(HapticFeedbackType.LongPress)
                         crossedUp = up
                     },
                     onDragEnd = {
@@ -250,7 +251,7 @@ private fun CardFront(
             modifier = Modifier.align(Alignment.TopEnd).padding(8.dp)
         ) {
             Icon(
-                Icons.Default.VolumeUp,
+                Icons.AutoMirrored.Filled.VolumeUp,
                 contentDescription = "播放发音",
                 tint = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.size(30.dp)

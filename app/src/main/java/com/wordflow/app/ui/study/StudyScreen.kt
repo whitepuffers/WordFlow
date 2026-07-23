@@ -85,7 +85,7 @@ fun StudyRoute(mode: DeckMode, onExit: () -> Unit) {
         onExit = onExit,
         onMark = viewModel::mark,
         onFavorite = viewModel::toggleFavorite,
-        onSpeak = { word -> container.ttsManager.speak(word) },
+        onSpeak = { word -> if (soundEnabled) container.ttsManager.speak(word) },
         onRestart = viewModel::restart,
         onDismissAchievements = viewModel::dismissAchievements,
         haptic = haptic

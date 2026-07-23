@@ -57,7 +57,6 @@ private val TABS = listOf(
 @Composable
 fun AppRoot() {
     val navController = rememberNavController()
-    val container = LocalAppContainer.current
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
     val showBottomBar = currentRoute in TABS.map { it.route }
@@ -66,6 +65,7 @@ fun AppRoot() {
     DisposableEffect(Unit) {
         onDispose { SoundPlayer.release() }
     }
+// ...
 
     Scaffold(
         bottomBar = {
