@@ -21,6 +21,7 @@ data class AppSettings(
     val autoPlayTts: Boolean = false,
     val themeMode: ThemeMode = ThemeMode.SYSTEM,
     val currentBook: String = "cet4",
+    val ttsEngine: String? = null,
     /** 每题倒计时秒数 */
     val quizSeconds: Int = 15
 )
@@ -36,6 +37,7 @@ class SettingsRepository(private val context: Context) {
         val AUTO_TTS = booleanPreferencesKey("auto_tts")
         val THEME = stringPreferencesKey("theme_mode")
         val BOOK = stringPreferencesKey("current_book")
+        val TTS_ENGINE = stringPreferencesKey("tts_engine")
         val QUIZ_SECONDS = intPreferencesKey("quiz_seconds")
     }
 
@@ -49,6 +51,7 @@ class SettingsRepository(private val context: Context) {
             autoPlayTts = p[Keys.AUTO_TTS] ?: false,
             themeMode = ThemeMode.from(p[Keys.THEME]),
             currentBook = p[Keys.BOOK] ?: "cet4",
+            ttsEngine = p[Keys.TTS_ENGINE],
             quizSeconds = p[Keys.QUIZ_SECONDS] ?: 15
         )
     }
@@ -83,6 +86,13 @@ class SettingsRepository(private val context: Context) {
 
     suspend fun setCurrentBook(code: String) {
         context.dataStore.edit { it[Keys.BOOK] = code }
+    }
+
+    suspend fun setTtsEngine(engine: String?) {
+        context.dataStore.edit { 
+            if (engine == null) it.remove(Keys.TTS_ENGINE)
+            else it[Keys.TTS_ENGINE] = engine
+        }
     }
 
     suspend fun setQuizSeconds(seconds: Int) {

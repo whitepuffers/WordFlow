@@ -3,8 +3,11 @@ package com.wordflow.app.ui.settings
 import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Build
+import android.media.AudioManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -54,6 +57,8 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.wordflow.app.data.model.ThemeMode
 import com.wordflow.app.data.prefs.AppSettings
+import com.wordflow.app.tts.TtsEngineInfo
+import com.wordflow.app.tts.TtsStatus
 import com.wordflow.app.ui.LocalAppContainer
 import com.wordflow.app.ui.components.SectionCard
 import com.wordflow.app.ui.rememberAppHaptics
@@ -69,12 +74,37 @@ fun SettingsRoute() {
                 container.appContext,
                 container.settingsRepository,
                 container.wordRepository,
-                container.studyRepository
+                container.studyRepository,
+                container.ttsManager
             )
         }
     })
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     SettingsScreen(state = state, viewModel = viewModel)
+
+    // TTS 错误弹窗
+    if (state.showTtsErrorDialog) {
+        AlertDialog(
+            onDismissRequest = { viewModel.dismissTtsErrorDialog() },
+            title = { Text("语音引擎异常") },
+            text = {
+                val msg = when (state.ttsStatus) {
+                    TtsStatus.LANGUAGE_NOT_SUPPORTED -> "当前语音引擎不支持英语发音，建议安装或切换引擎。"
+                    else -> "系统语音引擎初始化失败，可能未安装 TTS 服务。"
+                }
+                Text(msg)
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    viewModel.installTts()
+                    viewModel.dismissTtsErrorDialog()
+                }) { Text("去修复") }
+            },
+            dismissButton = {
+                TextButton(onClick = { viewModel.dismissTtsErrorDialog() }) { Text("取消") }
+            }
+        )
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -88,6 +118,7 @@ fun SettingsScreen(state: SettingsUiState, viewModel: SettingsViewModel) {
 
     var showTimePicker by remember { mutableStateOf(false) }
     var showBookDialog by remember { mutableStateOf(false) }
+    var showEngineDialog by remember { mutableStateOf(false) }
     var pendingBook by remember { mutableStateOf<Pair<String, String>?>(null) } // code to name
     var showResetDialog by remember { mutableStateOf(false) }
 
@@ -243,6 +274,23 @@ fun SettingsScreen(state: SettingsUiState, viewModel: SettingsViewModel) {
                         haptic(if (it) HapticFeedbackType.ToggleOn else HapticFeedbackType.ToggleOff)
                         viewModel.setAutoPlayTts(it)
                     }
+
+                    Spacer(Modifier.height(8.dp))
+                    TtsStatusRow(
+                        status = state.ttsStatus,
+                        errorCode = state.ttsErrorCode,
+                        engine = state.ttsEngine,
+                        onFix = { viewModel.installTts() },
+                        onSelectEngine = { showEngineDialog = true }
+                    )
+
+                    Spacer(Modifier.height(16.dp))
+                    TtsDiagnosticCenter(
+                        musicVolume = state.musicVolume,
+                        onTestMusic = { viewModel.playTestBeep(AudioManager.STREAM_MUSIC) },
+                        onTestNotification = { viewModel.playTestBeep(AudioManager.STREAM_NOTIFICATION) },
+                        onTestAlarm = { viewModel.playTestBeep(AudioManager.STREAM_ALARM) }
+                    )
                 }
             }
 
@@ -426,6 +474,65 @@ fun SettingsScreen(state: SettingsUiState, viewModel: SettingsViewModel) {
         )
     }
 
+    // ---- 引擎选择弹窗 ----
+    if (showEngineDialog) {
+        AlertDialog(
+            onDismissRequest = { showEngineDialog = false },
+            title = { Text("选择语音引擎") },
+            text = {
+                Column {
+                    // 系统默认
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
+                    ) {
+                        RadioButton(
+                            selected = settings.ttsEngine == null,
+                            onClick = {
+                                viewModel.setTtsEngine(null)
+                                showEngineDialog = false
+                            }
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text("系统默认", fontWeight = FontWeight.SemiBold)
+                    }
+                    
+                    state.availableEngines.forEach { engine ->
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
+                        ) {
+                            RadioButton(
+                                selected = settings.ttsEngine == engine.name,
+                                onClick = {
+                                    viewModel.setTtsEngine(engine.name)
+                                    showEngineDialog = false
+                                }
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Column {
+                                Text(engine.label, fontWeight = FontWeight.SemiBold)
+                                Text(engine.name, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        }
+                    }
+                    
+                    if (state.availableEngines.none { it.name == "com.google.android.tts" }) {
+                        Text(
+                            "未检测到谷歌 TTS，建议安装以获得最佳体验。",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.padding(top = 8.dp)
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showEngineDialog = false }) { Text("取消") }
+            }
+        )
+    }
+
     // ---- 重置二次确认 ----
     if (showResetDialog) {
         AlertDialog(
@@ -447,6 +554,111 @@ fun SettingsScreen(state: SettingsUiState, viewModel: SettingsViewModel) {
                 TextButton(onClick = { showResetDialog = false }) { Text("取消") }
             }
         )
+    }
+}
+
+@Composable
+private fun TtsDiagnosticCenter(
+    musicVolume: Int,
+    onTestMusic: () -> Unit,
+    onTestNotification: () -> Unit,
+    onTestAlarm: () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(
+                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                MaterialTheme.shapes.medium
+            )
+            .padding(12.dp)
+    ) {
+        Text(
+            "音频诊断中心",
+            style = MaterialTheme.typography.titleSmall,
+            color = MaterialTheme.colorScheme.primary
+        )
+        Spacer(Modifier.height(8.dp))
+        Text(
+            "当前媒体音量: $musicVolume",
+            style = MaterialTheme.typography.bodyMedium
+        )
+        Spacer(Modifier.height(8.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            OutlinedButton(
+                onClick = onTestMusic,
+                modifier = Modifier.weight(1f),
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(2.dp)
+            ) {
+                Text("媒体音", style = MaterialTheme.typography.labelSmall)
+            }
+            OutlinedButton(
+                onClick = onTestNotification,
+                modifier = Modifier.weight(1f),
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(2.dp)
+            ) {
+                Text("通知音", style = MaterialTheme.typography.labelSmall)
+            }
+            OutlinedButton(
+                onClick = onTestAlarm,
+                modifier = Modifier.weight(1f),
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(2.dp)
+            ) {
+                Text("闹钟音", style = MaterialTheme.typography.labelSmall)
+            }
+        }
+        Text(
+            "注: 如果测试音有声但单词无声，则为引擎数据包问题。如果闹钟音也无声，请检查物理开关。",
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(top = 8.dp)
+        )
+    }
+}
+
+@Composable
+private fun TtsStatusRow(
+    status: TtsStatus,
+    errorCode: Int?,
+    engine: String?,
+    onFix: () -> Unit,
+    onSelectEngine: () -> Unit
+) {
+    val (statusText, color) = when (status) {
+        TtsStatus.INITIALIZING -> "正在初始化..." to MaterialTheme.colorScheme.onSurfaceVariant
+        TtsStatus.READY -> "已就绪" to MaterialTheme.colorScheme.primary
+        TtsStatus.LANGUAGE_NOT_SUPPORTED -> "引擎不支持英语" to MaterialTheme.colorScheme.error
+        TtsStatus.LANGUAGE_MISSING_DATA -> "缺少语音包，请点击修复下载" to MaterialTheme.colorScheme.error
+        TtsStatus.INITIALIZATION_FAILED -> "引擎初始化失败" to MaterialTheme.colorScheme.error
+        TtsStatus.PLAYBACK_ERROR -> "播放时出错" to MaterialTheme.colorScheme.error
+    }
+
+    val engineLabel = engine?.let { " ($it)" } ?: ""
+    val detailedText = if (errorCode != null) "$statusText (Error: $errorCode)$engineLabel" else "$statusText$engineLabel"
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .clickable { onSelectEngine() }
+        ) {
+            Text("语音引擎状态 (点击切换)", style = MaterialTheme.typography.bodyLarge)
+            Text(detailedText, style = MaterialTheme.typography.bodySmall, color = color)
+        }
+        if (status != TtsStatus.READY && status != TtsStatus.INITIALIZING) {
+            OutlinedButton(
+                onClick = onFix,
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp),
+                modifier = Modifier.height(32.dp)
+            ) {
+                Text("修复", style = MaterialTheme.typography.labelMedium)
+            }
+        }
     }
 }
 
