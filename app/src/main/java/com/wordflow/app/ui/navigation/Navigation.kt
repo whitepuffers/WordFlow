@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -42,7 +43,15 @@ fun AppNavHost(
                 onStartStudy = { navController.navigate(Routes.study(DeckMode.NEW)) },
                 onStartReview = { navController.navigate(Routes.study(DeckMode.REVIEW)) },
                 onStartQuiz = { navController.navigate(Routes.QUIZ) },
-                onOpenSettings = { navController.navigate(Routes.SETTINGS) }
+                onOpenSettings = {
+                    navController.navigate(Routes.SETTINGS) {
+                        popUpTo(navController.graph.findStartDestination().id) {
+                            saveState = true
+                        }
+                        launchSingleTop = true
+                        restoreState = true
+                    }
+                }
             )
         }
         composable(Routes.QUIZ) {
