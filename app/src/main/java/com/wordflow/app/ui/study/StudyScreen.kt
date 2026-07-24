@@ -69,12 +69,10 @@ fun StudyRoute(mode: DeckMode, onExit: () -> Unit) {
     )
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val haptic = rememberAppHaptics()
-    val soundEnabled = LocalSoundEnabled.current
 
-    // 成就解锁：播放提示音 + 震动
+    // 成就解锁：震动反馈
     LaunchedEffect(state.newAchievements) {
         if (state.newAchievements.isNotEmpty()) {
-            if (soundEnabled) SoundPlayer.celebrate()
             haptic(HapticFeedbackType.LongPress)
         }
     }

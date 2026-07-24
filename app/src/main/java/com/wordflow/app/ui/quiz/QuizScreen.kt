@@ -101,7 +101,6 @@ fun QuizRoute() {
     // 成就庆祝
     LaunchedEffect(state.newAchievements) {
         if (state.newAchievements.isNotEmpty()) {
-            if (soundEnabled) SoundPlayer.celebrate()
             haptic(HapticFeedbackType.LongPress)
         }
     }

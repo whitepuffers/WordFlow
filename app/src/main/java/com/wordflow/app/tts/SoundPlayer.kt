@@ -29,10 +29,6 @@ object SoundPlayer {
         runCatching { ensure()?.startTone(ToneGenerator.TONE_PROP_NACK, 260) }
     }
 
-    fun celebrate() {
-        runCatching { ensure()?.startTone(ToneGenerator.TONE_PROP_ACK, 350) }
-    }
-
     @Synchronized
     fun release() {
         toneGenerator?.release()
